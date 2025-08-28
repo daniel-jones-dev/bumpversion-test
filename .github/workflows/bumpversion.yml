@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -54,7 +54,11 @@ jobs:
           git checkout -b bumpversion-${{ steps.bump.outputs.current-version }}
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
-          git push origin bumpversion-${{ steps.bump.outputs.current-version }}
+
+      - name: Push changes
+        id: push_changes
+        run: |
+          git push
           
       - name: Create Pull Request
         id: create_pr
