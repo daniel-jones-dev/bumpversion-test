@@ -53,14 +53,14 @@ jobs:
         run: |
           git config --local user.email "open-source@github.com"
           git config --local user.name "DeepL Open-Source Bot"
-          git checkout -b bumpversion-${{ steps.bump.outputs.current-version }}
+#          git checkout -b bumpversion-${{ steps.bump.outputs.current-version }}
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
 
       - name: Push changes
         id: push_changes
         run: |
-          git push --force --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
+          git push --force-with-lease --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
           
       - name: Create Pull Request
         id: create_pr
