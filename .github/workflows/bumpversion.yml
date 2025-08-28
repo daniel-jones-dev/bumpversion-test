@@ -20,12 +20,25 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+          save-cache: false
+
+      - name: Install bump-my-version
+        run: |
+          uv tool install bump-my-version
+
       - name: Bump version
         id: bump
-        uses: callowayproject/bump-my-version@master
-        with:
-          args: ${{ inputs.bump-type }}
-          github-token: ${{ secrets.GH_TOKEN }}
+        shell: bash
+        run: |
+          echo "previous-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+  
+          bump-my-version bump ${{ inputs.bump-type }}
+          ([[ $? -gt 0 ]] && echo "bumped=false" || echo "bumped=true") >> $GITHUB_OUTPUT
+          echo "current-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
 
       - name: Update changelog
         id: changelog
