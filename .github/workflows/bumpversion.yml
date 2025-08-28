@@ -69,3 +69,4 @@ jobs:
           title: "Bump version to ${{ steps.bump.outputs.current-version }}"
           body: "This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog."
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
+          base: main
