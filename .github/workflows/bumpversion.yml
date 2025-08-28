@@ -60,7 +60,7 @@ jobs:
       - name: Push changes
         id: push_changes
         run: |
-          git push --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
+          git push --force --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
           
       - name: Create Pull Request
         id: create_pr
