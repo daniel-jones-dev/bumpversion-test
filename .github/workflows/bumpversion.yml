@@ -1,0 +1,92 @@
+name: Bump Version
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  bump_version:
+    if: startsWith(github.event.comment.body, 'bumpversion ') && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if commenter is a maintainer
+        id: check_maintainer
+        run: |
+          COMMENTER="${{ github.event.comment.user.login }}"
+          REPO="${{ github.repository }}"
+          PERMISSIONS=$(gh api repos/$REPO/collaborators/$COMMENTER/permission --jq .permission)
+          echo "is_maintainer=false" >> $GITHUB_ENV
+          if [[ "$PERMISSIONS" == "admin" || "$PERMISSIONS" == "write" ]]; then
+            echo "is_maintainer=true" >> $GITHUB_ENV
+          fi
+
+      - name: Exit if not a maintainer
+        if: env.is_maintainer != 'true'
+        run: exit 0
+
+      - name: Check out the repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install bump-my-version
+        run: |
+          uv tool install bump-my-version
+
+      - name: Get new version
+        id: get_version
+        run: |
+          NEW_VERSION=$(bump-my-version show --increment minor new_version)
+          VERSION=$(echo "${{ github.event.comment.body }}" | awk '{print $2}')
+          echo "::set-output name=new_version::$VERSION"
+
+      - name: Bump version
+        run: |
+          bumpversion minor --tag --new-version ${{ steps.get_version.outputs.new_version }}
+
+      - name: Update changelog
+        run: |
+          echo "## Unreleased" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "- Bumped version to ${{ steps.get_version.outputs.new_version }}" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat old_changelog.md >> CHANGELOG.md
+          mv CHANGELOG.md old_changelog.md
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "docs: Increase version to ${{ steps.get_version.outputs.new_version }}"
+          git commit -m "docs: add Unreleased section to changelog for changes prepared for next release"
+
+      - name: Create a new branch
+        run: |
+          git checkout -b bumpversion-${{ steps.get_version.outputs.new_version }}
+
+      - name: Push changes
+        run: |
+          git push origin bumpversion-${{ steps.get_version.outputs.new_version }}
+
+      - name: Create Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: "Bump version to ${{ steps.get_version.outputs.new_version }}"
+          body: "This PR bumps the version to ${{ steps.get_version.outputs.new_version }} and updates the changelog."
+          head: bumpversion-${{ steps.get_version.outputs.new_version }}
+          base: main
+
+      - name: Comment on original comment
+        run: |
+          PR_URL="${{ steps.create_pr.html_url }}"
+          COMMENT_ID="${{ github.event.comment.id }}"
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -d "{\"body\": \"Pull request created: $PR_URL\"}" \
+          "https://api.github.com/repos/${{ github.repository }}/issues/comments/$COMMENT_ID/replies"
