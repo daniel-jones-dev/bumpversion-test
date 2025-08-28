@@ -17,3 +17,6 @@ commit_args = ""
 
 [[tool.bumpversion.files]]
 filename = "src/a.py"
+
+[[tool.bumpversion.files]]
+filename = "src/b.py"
