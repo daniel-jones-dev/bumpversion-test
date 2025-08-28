@@ -57,10 +57,10 @@ jobs:
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
 
-      - name: Push changes
-        id: push_changes
-        run: |
-          git push --force-with-lease --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
+#      - name: Push changes
+#        id: push_changes
+#        run: |
+#          git push --force-with-lease --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
           
       - name: Create Pull Request
         id: create_pr
