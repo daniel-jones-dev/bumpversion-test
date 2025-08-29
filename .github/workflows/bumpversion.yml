@@ -1,8 +1,9 @@
 name: Bump Version
 run-name: Bump version (${{ inputs.bump-type }}) by @${{ github.actor }}
 
-# Required secrets:
-# - GH_TOKEN: A GitHub token with repo permissions
+# Note: need to allow GitHub Actions to create pull requests in repository
+# settings (Actions -> General - > Workflow permissions).
+# Optional secrets:
 # - GPG_PRIVATE_KEY: The private GPG key for signing commits and tags
 # - GPG_KEY_ID: The GPG key ID for signing commits and tags
 
@@ -30,6 +31,11 @@ on:
         type: boolean
       create-pull-request:
         description: 'Create pull request for review'
+        required: false
+        default: true
+        type: boolean
+      gpg-signing:
+        description: 'Sign commits and tags with GPG'
         required: false
         default: true
         type: boolean
@@ -84,13 +90,22 @@ jobs:
       - name: git config and GPG setup
         id: git_setup
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import --batch --yes
-          echo "use-agent" >> ~/.gnupg/gpg.conf
-          echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
-          echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
-          echo "GPG setup complete"
+          if ${{ inputs.gpg-signing }}; then
+            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import --batch --yes
+            echo "use-agent" >> ~/.gnupg/gpg.conf
+            echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
+            echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
+            echo "GPG setup complete"
           
-          git config --global user.signingkey "${{ secrets.GPG_KEY_ID }}"
+            git config --global commit.gpgSign true
+            git config --global tag.gpgSign true
+            git config --global user.signingkey "${{ secrets.GPG_KEY_ID }}"
+          else
+            echo "GPG signing disabled"
+            git config --global commit.gpgSign false
+            git config --global tag.gpgSign false
+          fi
+          
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>"
 
@@ -123,7 +138,7 @@ jobs:
         id: create_tag
         if: ${{ ! inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
         run: |
-          git tag -s v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
+          git tag v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
           git push origin v${{ steps.bump.outputs.current-version }}
 
       - name: Create GitHub release
