@@ -12,6 +12,11 @@ on:
         - major
         - minor
         - patch
+      create-tag:
+        description: 'Create tag'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   bump_version:
@@ -57,10 +62,12 @@ jobs:
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}" \
             --author "${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>"
           
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-          git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
-          git push --tags
+          if [[ ${{ inputs.create-tag }} == 'true' ]]; then
+            git config --global user.name "${{ github.actor }}"
+            git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
+            git push --tags
+          fi
 
 # TODO tag signing
 
