@@ -51,11 +51,17 @@ jobs:
       - name: Create branch and commit
         id: create_branch
         run: |
-          git config --local user.email "open-source@github.com"
-          git config --local user.name "DeepL Open-Source Bot"          
+#          git config --local user.email "open-source@github.com"
+#          git config --local user.name "DeepL Open-Source Bot"
           # git checkout -b bumpversion-${{ steps.bump.outputs.current-version }}
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
+
+      - name: Create tag
+        id: create_tag
+        run: |
+            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
+            # TODO tag signing
 
 #      - name: Push changes
 #        id: push_changes
