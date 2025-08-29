@@ -84,8 +84,9 @@ jobs:
           echo "pinentry-program /usr/bin/pinentry" >> ~/.gnupg/gpg.conf
           echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
           echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
-          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --edit-key "${{ secrets.GPG_KEY_ID }}" trust quit
+          echo "GPG setup complete"
         
+          git config --global user.signingkey "${{ secrets.GPG_KEY_ID }}"
           git config --global user.name "Tagging bot"
           git config --global user.email "danielryanjones@protonmail.com"
           git tag -s v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
