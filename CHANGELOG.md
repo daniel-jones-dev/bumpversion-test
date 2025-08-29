@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-08-29
+
 ### Added
 
 - GPG signing and lots of cleanups.
@@ -57,7 +59,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - More dummy changes.
 
-[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.10...HEAD
+[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.0...HEAD
+
+[1.1.0]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.10...v1.1.0
 
 [1.0.10]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.9...v1.0.10
 
