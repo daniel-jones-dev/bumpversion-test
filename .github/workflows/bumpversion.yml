@@ -55,6 +55,10 @@ jobs:
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
+          git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
+          git push --tags
+
+# TODO tag signing
 
       - name: Create Pull Request
         id: create_pr
@@ -66,10 +70,3 @@ jobs:
           base: main
           token: ${{ secrets.GH_TOKEN }}
 
-      - name: Create tag
-        id: create_tag
-        run: |
-            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
-            git push --tags
-
-# TODO tag signing
