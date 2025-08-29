@@ -81,7 +81,6 @@ jobs:
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import --batch --yes
           echo "use-agent" >> ~/.gnupg/gpg.conf
-          echo "pinentry-program /usr/bin/pinentry" >> ~/.gnupg/gpg.conf
           echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
           echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
           echo "GPG setup complete"
