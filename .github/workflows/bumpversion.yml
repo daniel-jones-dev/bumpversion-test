@@ -23,6 +23,11 @@ on:
         - minor
         - patch
         - post-review-release # Do not bump version, just create tag & release based on latest changelog
+      fail-on-empty-changelog:
+        description: 'Fail if changelog is empty'
+        required: false
+        default: true
+        type: boolean
       create-pull-request:
         description: 'Create pull request for review'
         required: false
@@ -66,7 +71,7 @@ jobs:
           command: bump
           version: ${{ inputs.bump-type }}
           keep-unreleased-section: true
-          fail-on-empty-release-notes: true
+          fail-on-empty-release-notes: ${{ inputs.fail-on-empty-changelog }}
 
       # Query the changelog for the latest release notes, specifically for the case inputs.bump-type == 'post-review-release'
       - name: Query latest changelog
