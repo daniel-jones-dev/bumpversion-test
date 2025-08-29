@@ -51,9 +51,6 @@ jobs:
       - name: Create branch and commit
         id: create_branch
         run: |
-#          git config --local user.email "open-source@github.com"
-#          git config --local user.name "DeepL Open-Source Bot"
-          # git checkout -b bumpversion-${{ steps.bump.outputs.current-version }}
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
 
