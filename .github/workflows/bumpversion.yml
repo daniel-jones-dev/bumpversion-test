@@ -12,6 +12,7 @@ on:
         - major
         - minor
         - patch
+        - post-review-release
       create-pull-request:
         description: 'Create pull request for review'
         required: false
@@ -39,19 +40,32 @@ jobs:
         shell: bash
         run: |
           echo "previous-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
-  
-          bump-my-version bump ${{ inputs.bump-type }}
-          ([[ $? -gt 0 ]] && echo "bumped=false" || echo "bumped=true") >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.bump-type }}" == "post-review-release" ]]; then
+            echo "Post-review-release selected, not bumping version"
+            echo "bumped=false" >> $GITHUB_OUTPUT
+          else
+            bump-my-version bump ${{ inputs.bump-type }}
+            ([[ $? -gt 0 ]] && echo "bumped=false" || echo "bumped=true") >> $GITHUB_OUTPUT
+          fi
           echo "current-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
 
       - name: Update changelog
         id: changelog
         uses: release-flow/keep-a-changelog-action@v2
+        if: ${{ inputs.bump-type != 'post-review-release' }}
         with:
           command: bump
           version: ${{ inputs.bump-type }}
           keep-unreleased-section: true
           fail-on-empty-release-notes: true
+
+      # Query the changelog for the latest release notes, for the case inputs.bump-type == 'post-review-release'
+      - name: Query latest changelog
+        id: query_changelog
+        uses: release-flow/keep-a-changelog-action@v2
+        with:
+          command: query
+          version: latest
 
       - name: git setup
         id: git_setup
@@ -68,6 +82,7 @@ jobs:
 
       - name: Create commit
         id: create_commit
+        if: ${{ inputs.bump-type != 'post-review-release' }}
         run: |
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
@@ -81,31 +96,31 @@ jobs:
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v7
-        if: ${{ inputs.create-pull-request }}
+        if: ${{ inputs.create-pull-request && inputs.bump-type != 'post-review-release' }}
         with:
           title: "Bump version to ${{ steps.bump.outputs.current-version }}"
           body: |
             This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog.
-            After merging this PR, remember to trigger the tag creation action.
+            After merging this PR, remember to re-trigger this action with the 'post-review-release' option to create the tag & release.
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
           base: main
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Create tag
         id: create_tag
-        if: ${{ ! inputs.create-pull-request }}
+        if: ${{ ! inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
         run: |
           git tag -s v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
           git push origin v${{ steps.bump.outputs.current-version }}
 
       - name: Create GitHub release
         id: create_release
-        if: ${{ ! inputs.create-pull-request }}
+        if: ${{ ! inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.bump.outputs.current-version }}
           name: v${{ steps.bump.outputs.current-version }}
-          body: ${{ steps.changelog.outputs.release-notes }}
+          body: ${{ steps.query_changelog.outputs.release-notes }}
           draft: false
           prerelease: false
           token: ${{ secrets.GH_TOKEN }}
