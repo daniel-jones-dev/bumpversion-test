@@ -12,10 +12,10 @@ on:
         - major
         - minor
         - patch
-      create-tag:
-        description: 'Create tag'
+      create-pull-request:
+        description: 'Create pull request for review'
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
@@ -53,31 +53,52 @@ jobs:
           keep-unreleased-section: true
           fail-on-empty-release-notes: true
 
-      - name: Create branch and commit
-        id: create_branch
+      - name: Create commit
+        id: create_commit
         run: |
           git add .
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}" \
             --author "${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>"
-          
-          if [[ ${{ inputs.create-tag }} ]]; then
-            git config --global user.name "${{ github.actor }}"
-            git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
-            git push --tags
-          fi
-
-# TODO tag signing
 
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v7
+        if: ${{ inputs.create-pull-request }}
         with:
           title: "Bump version to ${{ steps.bump.outputs.current-version }}"
-          body: "This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog."
+          body: |
+            This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog.
+            After merging this PR, remember to trigger the tag creation action.
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
           base: main
           token: ${{ secrets.GH_TOKEN }}
 
+      - name: Create tag
+        id: create_tag
+        if: ${{ ! inputs.create-pull-request }}
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import --batch --yes
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-program /usr/bin/pinentry" >> ~/.gnupg/gpg.conf
+          echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
+          echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
+          gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --edit-key "${{ secrets.GPG_KEY_ID }}" trust quit
+        
+          git config --global user.name "Tagging bot"
+          git config --global user.email "danielryanjones@protonmail.com"
+          git tag -s v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
+          git push origin v${{ steps.bump.outputs.current-version }}
+
+      - name: Create GitHub release
+        id: create_release
+        if: ${{ ! inputs.create-pull-request }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.bump.outputs.current-version }}
+          name: v${{ steps.bump.outputs.current-version }}
+          body: ${{ steps.changelog.outputs.release_notes }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GH_TOKEN }}
