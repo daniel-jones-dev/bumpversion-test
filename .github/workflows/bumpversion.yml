@@ -56,17 +56,6 @@ jobs:
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
 
-      - name: Create tag
-        id: create_tag
-        run: |
-            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
-
-# TODO tag signing
-#      - name: Push changes
-#        id: push_changes
-#        run: |
-#          git push --force-with-lease --set-upstream origin bumpversion-${{ steps.bump.outputs.current-version }}
-          
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v7
@@ -76,3 +65,11 @@ jobs:
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
           base: main
           token: ${{ secrets.GH_TOKEN }}
+
+      - name: Create tag
+        id: create_tag
+        run: |
+            git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
+            git push --tags
+
+# TODO tag signing
