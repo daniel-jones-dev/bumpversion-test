@@ -103,7 +103,6 @@ jobs:
             This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog.
             After merging this PR, remember to re-trigger this action with the 'post-review-release' option to create the tag & release.
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
-          base: main
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Create tag
