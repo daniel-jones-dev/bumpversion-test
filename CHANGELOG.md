@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.6] - 2025-08-29
+
 ### Added
 
-* Added post-review-release option.
+- Added post-review-release option.
 
 ## [1.0.5] - 2025-08-29
 
@@ -43,7 +45,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - More dummy changes.
 
-[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.6...HEAD
+
+[1.0.6]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.5...v1.0.6
 
 [1.0.5]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.4...v1.0.5
 
