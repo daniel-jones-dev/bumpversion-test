@@ -62,7 +62,7 @@ jobs:
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}" \
             --author "${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>"
           
-          if [[ ${{ inputs.create-pull-request }} ]]; then
+          if ${{ inputs.create-pull-request }}; then
             echo "Not pushing commit, creating pull request instead"
           else
             git push
