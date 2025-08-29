@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- GPG signing and lots of cleanups.
+
 ## [1.0.10] - 2025-08-29
 
 ## [1.0.9] - 2025-08-29
