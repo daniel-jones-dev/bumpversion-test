@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [1.0.6] - 2025-08-29
+
+### Added
+
+- Added post-review-release option.
+
+## [1.0.5] - 2025-08-29
+
 ### Changed
 * Dummy changes.
 
@@ -23,7 +32,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - More dummy changes.
 
-[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.6...HEAD
+
+[1.0.6]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.5...v1.0.6
+
+[1.0.5]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.4...v1.0.5
+
+[1.0.4]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.3...v1.0.4
+
+[1.0.3]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.2...v1.0.3
 
 [1.0.2]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.0.1...v1.0.2
 
