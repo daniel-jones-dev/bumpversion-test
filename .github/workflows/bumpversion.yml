@@ -61,7 +61,7 @@ jobs:
         id: create_tag
         run: |
             git tag -m "Version ${{ steps.bump.outputs.current-version }}" v${{ steps.bump.outputs.current-version }}
-            # TODO tag signing
+# TODO tag signing
 
 #      - name: Push changes
 #        id: push_changes
