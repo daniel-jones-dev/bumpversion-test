@@ -7,4 +7,4 @@ def func_b():
     pass
 
 def current_version():
-    return "1.1.1"
+    return "1.1.2"
