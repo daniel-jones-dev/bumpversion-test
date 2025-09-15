@@ -113,6 +113,16 @@ jobs:
               exit 1
             fi
 
+            GPG_KEYGRIP=`gpg --with-keygrip -K \
+              | sed -n '/[S]/{n;p}' \
+              | sed 's/Keygrip = //' \
+              | sed 's/ *//g'`
+            GPG_PASSPHRASE_HEX=`echo -n ${{ secrets.GPG_PASSPHRASE }} \
+              | od -A n -t x1 \
+              | tr -d ' ' | tr -d '\n'`
+            echo "PRESET_PASSPHRASE $GPG_KEYGRIP -1 $GPG_PASSPHRASE_HEX" \
+              | gpg-connect-agent
+
             git config --global commit.gpgSign true
             git config --global tag.gpgSign true
             git config --global user.signingkey "$KEY_ID"
