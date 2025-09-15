@@ -290,15 +290,9 @@ jobs:
             echo "2. After merging, re-run this workflow with \`post-review-release\` to create the tag and GitHub release" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if [[ "${{ steps.create_tag.outputs.tag-name }}" != "" ]]; then
-            TAG_NAME="${{ steps.create_tag.outputs.tag-name }}"
-            TAG_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-            echo "- **Tag Created:** [$TAG_NAME]($TAG_URL)" >> $GITHUB_STEP_SUMMARY
-            
-            if [[ "${{ steps.create_release.outputs.html_url }}" != "" ]]; then
-              RELEASE_URL="${{ steps.create_release.outputs.html_url }}"
-              echo "- **GitHub Release:** [Version ${{ steps.bump.outputs.current-version }}]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
-            fi
+          if [[ "${{ steps.create_release.outputs.html_url }}" != "" ]]; then
+            RELEASE_URL="${{ steps.create_release.outputs.html_url }}"
+            echo "- **GitHub Release:** [Version ${{ steps.bump.outputs.current-version }}]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
