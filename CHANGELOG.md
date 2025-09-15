@@ -6,12 +6,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [1.1.6] - 2025-09-15
+
 ### Added
+
 - Workflow summary.
 
 ### Changed
-- Tidy ups.
 
+- Tidy ups.
 
 ## [1.1.5] - 2025-09-15
 
@@ -79,7 +83,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - More dummy changes.
 
-[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.6...HEAD
+
+[1.1.6]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.5...v1.1.6
 
 [1.1.5]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.4...v1.1.5
 
