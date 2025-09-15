@@ -94,11 +94,11 @@ jobs:
         id: git_setup
         run: |
           if ${{ inputs.gpg-signing }}; then
-            gpg-agent --daemon \
-              --allow-preset-passphrase \
-              --default-cache-ttl 600 \
-              --max-cache-ttl 600
             echo "use-agent" >> ~/.gnupg/gpg.conf
+            echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
+            echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
+            echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
+            systemctl --user restart gpg-agent
             echo "GPG setup complete"
 
             echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
