@@ -236,7 +236,7 @@ jobs:
             This PR bumps the version to `${{ steps.bump.outputs.current-version }}` and updates the changelog.
             
             ### Next Steps
-            After merging this PR, trigger this workflow again with the `post-review-release` option to create the tag and GitHub release.
+            After merging this PR, trigger this workflow again with `bump type` set to `post-review-release` to create the tag and GitHub release.
             
             ### Changelog (automatically extracted from Unreleased section)
             ${{ steps.query_changelog.outputs.release-notes }}
@@ -287,7 +287,7 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
             echo "1. Review and merge [Pull Request #$PR_NUMBER]($PR_URL)" >> $GITHUB_STEP_SUMMARY
-            echo "2. After merging, re-run this workflow with \`post-review-release\` to create the tag and GitHub release" >> $GITHUB_STEP_SUMMARY
+            echo "2. After merging, re-run this workflow with \`bump type\` set to \`post-review-release\` to create the tag and GitHub release" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ steps.create_release.outputs.html_url }}" != "" ]]; then
