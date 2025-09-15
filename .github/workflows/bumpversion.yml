@@ -94,38 +94,91 @@ jobs:
         id: git_setup
         run: |
           if ${{ inputs.gpg-signing }}; then
+            # Create GPG directory with proper permissions
+            mkdir -p ~/.gnupg
+            chmod 700 ~/.gnupg
+            
+            # Configure GPG for non-interactive use
+            cat > ~/.gnupg/gpg.conf << EOF
+          use-agent
+          pinentry-mode loopback
+          batch
+          no-tty
+          EOF
+            
+            # Configure GPG agent for GitHub Actions
+            cat > ~/.gnupg/gpg-agent.conf << EOF
+          allow-preset-passphrase
+          default-cache-ttl 21600
+          max-cache-ttl 21600
+          pinentry-program /usr/bin/pinentry-curses
+          EOF
+            
+            # Set proper permissions
+            chmod 600 ~/.gnupg/gpg.conf ~/.gnupg/gpg-agent.conf
+            
+            # Kill any existing GPG agent and start fresh
+            gpgconf --kill gpg-agent || true
+            gpg-agent --daemon --allow-preset-passphrase || true
+            
+            # Import the GPG private key
             echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
                --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                --import --batch --yes
-            echo "use-agent" >> ~/.gnupg/gpg.conf
-            echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
-            echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
-            echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
-            systemctl --user restart gpg-agent
-            echo "GPG setup complete"
-          
-            # Extract GPG key ID from private key
+            
+            # Extract GPG key ID 
             KEY_ID=$(echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
               gpg --with-colons --import-options show-only --import 2>/dev/null | \
               awk -F: '/^sec:/ {print $5; exit}')
+            
             if [ -z "$KEY_ID" ]; then
               echo "Failed to extract GPG key ID from private key"
               exit 1
             fi
-
-            GPG_KEYGRIP=`gpg --with-keygrip -K \
-              | sed -n '/[S]/{n;p}' \
-              | sed 's/Keygrip = //' \
-              | sed 's/ *//g'`
-            GPG_PASSPHRASE_HEX=`echo -n ${{ secrets.GPG_PASSPHRASE }} \
-              | od -A n -t x1 \
-              | tr -d ' ' | tr -d '\n'`
-            echo "PRESET_PASSPHRASE $GPG_KEYGRIP -1 $GPG_PASSPHRASE_HEX" \
-              | gpg-connect-agent
+            
+            echo "Using GPG key ID: $KEY_ID"
+            
+            # Get the keygrip for passphrase preset (if passphrase is provided)
+            if [ -n "${{ secrets.GPG_PASSPHRASE }}" ]; then
+              # Get keygrip more reliably
+              GPG_KEYGRIP=$(gpg --with-keygrip --list-secret-keys "$KEY_ID" 2>/dev/null | \
+                grep -A1 "^sec" | grep "Keygrip" | head -1 | \
+                sed 's/.*Keygrip = //' | tr -d ' ')
+              
+              if [ -n "$GPG_KEYGRIP" ]; then
+                echo "Found keygrip: $GPG_KEYGRIP"
+                
+                # Convert passphrase to hex
+                GPG_PASSPHRASE_HEX=$(echo -n "${{ secrets.GPG_PASSPHRASE }}" | \
+                  od -A n -t x1 | tr -d ' \n')
+                
+                # Preset the passphrase
+                echo "PRESET_PASSPHRASE $GPG_KEYGRIP -1 $GPG_PASSPHRASE_HEX" | \
+                  gpg-connect-agent --no-autostart
+                
+                echo "Passphrase preset for keygrip: $GPG_KEYGRIP"
+              else
+                echo "Warning: Could not extract keygrip, passphrase preset may not work"
+              fi
+            fi
+            
+            # Test GPG signing to ensure it works
+            echo "test" | gpg --pinentry-mode loopback \
+              --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+              --clearsign --default-key "$KEY_ID" >/dev/null
+            
+            if [ $? -eq 0 ]; then
+              echo "GPG signing test successful"
+            else
+              echo "GPG signing test failed"
+              exit 1
+            fi
 
             git config --global commit.gpgSign true
             git config --global tag.gpgSign true
             git config --global user.signingkey "$KEY_ID"
+            git config --global gpg.program gpg
+            echo "GPG signing enabled with key: $KEY_ID"
           else
             echo "GPG signing disabled"
             git config --global commit.gpgSign false
