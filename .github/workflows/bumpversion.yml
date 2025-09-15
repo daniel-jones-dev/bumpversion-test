@@ -1,3 +1,6 @@
+# GitHub action to bump version, update changelog, and create release.
+# Can optionally be executed as a two-stage process with an intermediate pull request to allow reviews.
+
 name: Bump Version
 run-name: Bump version (${{ inputs.bump-type }}) by @${{ github.actor }}
 
@@ -5,6 +8,7 @@ run-name: Bump version (${{ inputs.bump-type }}) by @${{ github.actor }}
 # settings (Actions -> General - > Workflow permissions).
 # Optional secrets:
 # - GPG_PRIVATE_KEY: The private GPG key for signing commits and tags
+# - GPG_PASSPHRASE: The passphrase for the GPG private key, if needed
 
 permissions:
   contents: write
@@ -105,6 +109,10 @@ jobs:
               exit 1
             fi
 
+            if [ -n "${{ secrets.GPG_PASSPHRASE }}" ]; then
+              gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --edit-key $KEY_ID trust quit
+            fi
+
             git config --global commit.gpgSign true
             git config --global tag.gpgSign true
             git config --global user.signingkey "$KEY_ID"
@@ -115,7 +123,7 @@ jobs:
           fi
 
           git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
       - name: Create commit
         id: create_commit
