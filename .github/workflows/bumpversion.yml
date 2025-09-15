@@ -279,12 +279,30 @@ jobs:
           echo "- **Bump Type:** ${{ inputs.bump-type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ steps.bump.outputs.current-version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **GPG Signing:** ${{ inputs.gpg-signing }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Create PR:** ${{ inputs.create-pull-request }}" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ steps.create_pr.outputs.pull-request-number }}" != "" ]]; then
-            echo "- **Pull Request:** #${{ steps.create_pr.outputs.pull-request-number }}" >> $GITHUB_STEP_SUMMARY
+            PR_NUMBER="${{ steps.create_pr.outputs.pull-request-number }}"
+            PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
+            echo "- **Pull Request:** [#$PR_NUMBER]($PR_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "1. Review and merge [Pull Request #$PR_NUMBER]($PR_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "2. After merging, re-run this workflow with \`post-review-release\` to create the tag and GitHub release" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ steps.create_tag.outputs.tag-name }}" != "" ]]; then
-            echo "- **Tag Created:** ${{ steps.create_tag.outputs.tag-name }}" >> $GITHUB_STEP_SUMMARY
+            TAG_NAME="${{ steps.create_tag.outputs.tag-name }}"
+            TAG_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "- **Tag Created:** [$TAG_NAME]($TAG_URL)" >> $GITHUB_STEP_SUMMARY
+            
+            if [[ "${{ steps.create_release.outputs.html_url }}" != "" ]]; then
+              RELEASE_URL="${{ steps.create_release.outputs.html_url }}"
+              echo "- **GitHub Release:** [Version ${{ steps.bump.outputs.current-version }}]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Workflow Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID:** [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
