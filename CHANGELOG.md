@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- Workflow summary.
+
+### Changed
+- Tidy ups.
+
 
 ## [1.1.5] - 2025-09-15
 
