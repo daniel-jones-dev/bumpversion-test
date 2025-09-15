@@ -94,16 +94,15 @@ jobs:
         id: git_setup
         run: |
           if ${{ inputs.gpg-signing }}; then
+            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
+               --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+               --import --batch --yes
+            echo "use-agent" >> ~/.gnupg/gpg.conf
             echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
             echo "default-cache-ttl 600" >> ~/.gnupg/gpg-agent.conf
             echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
             systemctl --user restart gpg-agent
             echo "GPG setup complete"
-
-            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
-               --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-               --import --batch --yes
-            echo "use-agent" >> ~/.gnupg/gpg.conf
           
             # Extract GPG key ID from private key
             KEY_ID=$(echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
