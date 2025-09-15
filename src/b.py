@@ -7,9 +7,9 @@ def func_b():
     pass
 
 def current_version_a():
-    return "1.1.6"
+    return "1.1.7"
 
 
 def current_version_with_extra():
-    return "1.1.6" + "-extra"
+    return "1.1.7" + "-extra"
 
