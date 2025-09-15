@@ -4,11 +4,12 @@
 name: Bump Version
 run-name: Bump version (${{ inputs.bump-type }}) by @${{ github.actor }}
 
-# Note: need to allow GitHub Actions to create pull requests in repository
-# settings (Actions -> General - > Workflow permissions).
+# Note: Enable GitHub Actions to create pull requests in repository settings:
+# Settings -> Actions -> General -> Workflow permissions -> Allow GitHub Actions to create and approve pull requests
+#
 # Optional secrets:
 # - GPG_PRIVATE_KEY: The private GPG key for signing commits and tags
-# - GPG_PASSPHRASE: The passphrase for the GPG private key, if needed
+# - GPG_PASSPHRASE: The passphrase for the GPG private key (optional if key has no passphrase)
 
 permissions:
   contents: write
@@ -18,15 +19,15 @@ on:
   workflow_dispatch:
     inputs:
       bump-type:
-        description: 'Bump type'
+        description: 'Version bump type'
         required: true
         default: 'patch'
         type: choice
         options:
-        - major
-        - minor
-        - patch
-        - post-review-release # Do not bump version, just create tag & release based on latest changelog
+          - major
+          - minor
+          - patch
+          - post-review-release # Do not bump version, just create tag & release based on latest changelog
       fail-on-empty-changelog:
         description: 'Fail if changelog is empty'
         required: false
@@ -46,32 +47,38 @@ on:
 jobs:
   bump_version:
     runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.bump.outputs.current-version }}
+      pr-number: ${{ steps.create_pr.outputs.pull-request-number }}
+
     steps:
-      - name: Checkout the code
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install uv
+      - name: Setup Python environment
         uses: astral-sh/setup-uv@v6
 
       - name: Install bump-my-version
-        run: |
-          uv tool install bump-my-version
+        run: uv tool install bump-my-version
 
-      # Bump version in source files (if necessary) and output current version
       - name: Bump version
         id: bump
         shell: bash
         run: |
           if [[ "${{ inputs.bump-type }}" == "post-review-release" ]]; then
-            echo "Post-review-release selected, not bumping version"
+            echo "::notice::Post-review release: skipping version bump"
           else
+            echo "::notice::Bumping version with type: ${{ inputs.bump-type }}"
             bump-my-version bump ${{ inputs.bump-type }}
           fi
-          echo "current-version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+          
+          CURRENT_VERSION=$(bump-my-version show current_version)
+          echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "::notice::Current version: $CURRENT_VERSION"
 
-      # Update changelog with new release section and tag links
       - name: Update changelog
         id: changelog
         uses: release-flow/keep-a-changelog-action@v2
@@ -82,18 +89,29 @@ jobs:
           keep-unreleased-section: true
           fail-on-empty-release-notes: ${{ inputs.fail-on-empty-changelog }}
 
-      # Query the changelog for the latest release notes, specifically for the case inputs.bump-type == 'post-review-release'
-      - name: Query latest changelog
+      - name: Query changelog for release notes
         id: query_changelog
         uses: release-flow/keep-a-changelog-action@v2
         with:
           command: query
           version: latest
 
-      - name: git config and GPG setup
+      - name: Configure Git and GPG
         id: git_setup
         run: |
+          # Configure Git user
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          
           if ${{ inputs.gpg-signing }}; then
+            echo "::group::Setting up GPG signing"
+            
+            # Validate required secrets
+            if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+              echo "::error::GPG_PRIVATE_KEY secret is required when GPG signing is enabled"
+              exit 1
+            fi
+            
             # Create GPG directory with proper permissions
             mkdir -p ~/.gnupg
             chmod 700 ~/.gnupg
@@ -118,29 +136,32 @@ jobs:
             chmod 600 ~/.gnupg/gpg.conf ~/.gnupg/gpg-agent.conf
             
             # Kill any existing GPG agent and start fresh
-            gpgconf --kill gpg-agent || true
-            gpg-agent --daemon --allow-preset-passphrase || true
+            gpgconf --kill gpg-agent 2>/dev/null || true
+            gpg-agent --daemon --allow-preset-passphrase 2>/dev/null || true
             
             # Import the GPG private key
-            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
-               --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-               --import --batch --yes
+            echo "Importing GPG private key..."
+            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg \
+              --pinentry-mode loopback \
+              --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+              --import --batch --yes
             
-            # Extract GPG key ID 
+            # Extract GPG key ID
             KEY_ID=$(echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
               gpg --with-colons --import-options show-only --import 2>/dev/null | \
               awk -F: '/^sec:/ {print $5; exit}')
             
             if [ -z "$KEY_ID" ]; then
-              echo "Failed to extract GPG key ID from private key"
+              echo "::error::Failed to extract GPG key ID from private key"
               exit 1
             fi
             
             echo "Using GPG key ID: $KEY_ID"
             
-            # Get the keygrip for passphrase preset (if passphrase is provided)
+            # Handle passphrase preset if provided
             if [ -n "${{ secrets.GPG_PASSPHRASE }}" ]; then
-              # Get keygrip more reliably
+              echo "Setting up GPG passphrase preset..."
+              # Extract keygrip
               GPG_KEYGRIP=$(gpg --with-keygrip --list-secret-keys "$KEY_ID" 2>/dev/null | \
                 grep -A1 "^sec" | grep "Keygrip" | head -1 | \
                 sed 's/.*Keygrip = //' | tr -d ' ')
@@ -148,81 +169,99 @@ jobs:
               if [ -n "$GPG_KEYGRIP" ]; then
                 echo "Found keygrip: $GPG_KEYGRIP"
                 
-                # Convert passphrase to hex
+                # Convert passphrase to hex format
                 GPG_PASSPHRASE_HEX=$(echo -n "${{ secrets.GPG_PASSPHRASE }}" | \
                   od -A n -t x1 | tr -d ' \n')
                 
-                # Preset the passphrase
+                # Preset the passphrase in GPG agent
                 echo "PRESET_PASSPHRASE $GPG_KEYGRIP -1 $GPG_PASSPHRASE_HEX" | \
                   gpg-connect-agent --no-autostart
                 
-                echo "Passphrase preset for keygrip: $GPG_KEYGRIP"
+                echo "Passphrase preset successful for keygrip: $GPG_KEYGRIP"
               else
-                echo "Warning: Could not extract keygrip, passphrase preset may not work"
+                echo "::warning::Could not extract keygrip, passphrase preset may not work"
               fi
+            else
+              echo "No GPG passphrase provided, assuming key has no passphrase"
             fi
             
-            # Test GPG signing to ensure it works
-            echo "test" | gpg --pinentry-mode loopback \
+            # Test GPG signing capability
+            echo "Testing GPG signing..."
+            if echo "test signing" | gpg \
+              --pinentry-mode loopback \
               --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
-              --clearsign --default-key "$KEY_ID" >/dev/null
-            
-            if [ $? -eq 0 ]; then
-              echo "GPG signing test successful"
+              --clearsign --default-key "$KEY_ID" >/dev/null 2>&1; then
+              echo "::notice::GPG signing test successful"
             else
-              echo "GPG signing test failed"
+              echo "::error::GPG signing test failed"
               exit 1
             fi
 
+            # Configure Git for GPG signing
             git config --global commit.gpgSign true
             git config --global tag.gpgSign true
             git config --global user.signingkey "$KEY_ID"
             git config --global gpg.program gpg
-            echo "GPG signing enabled with key: $KEY_ID"
+            
+            echo "::notice::GPG signing enabled with key: $KEY_ID"
+            echo "::endgroup::"
           else
-            echo "GPG signing disabled"
+            echo "::notice::GPG signing disabled"
             git config --global commit.gpgSign false
             git config --global tag.gpgSign false
           fi
 
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-
-      - name: Create commit
+      - name: Create version commit
         id: create_commit
         if: ${{ inputs.bump-type != 'post-review-release' }}
         run: |
           git add .
           git commit -m "docs: Increase version to ${{ steps.bump.outputs.current-version }}"
-          
           if ${{ inputs.create-pull-request }}; then
-            echo "Not pushing commit, creating pull request instead"
+            echo "::notice::Commit created, will be pushed via pull request"
           else
+            echo "::notice::Pushing commit directly"
             git push
           fi
 
       - name: Create Pull Request
         id: create_pr
-        uses: peter-evans/create-pull-request@v7
         if: ${{ inputs.create-pull-request && inputs.bump-type != 'post-review-release' }}
+        uses: peter-evans/create-pull-request@v7
         with:
           title: "Bump version to ${{ steps.bump.outputs.current-version }}"
           body: |
-            This PR bumps the version to ${{ steps.bump.outputs.current-version }} and updates the changelog.
-            After merging this PR, remember to re-trigger this action with the 'post-review-release' option to create the tag & release.
+            ## Version Bump: ${{ steps.bump.outputs.current-version }}
+            
+            This PR bumps the version to `${{ steps.bump.outputs.current-version }}` and updates the changelog.
+            
+            ### Next Steps
+            After merging this PR, trigger this workflow again with the `post-review-release` option to create the tag and GitHub release.
+            
+            ### Changelog (automatically extracted from Unreleased section)
+            ${{ steps.query_changelog.outputs.release-notes }}
+            
+            ---
+            *This PR was automatically created by the Bump Version workflow*
           branch: bumpversion-${{ steps.bump.outputs.current-version }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          delete-branch: true
 
-      - name: Create tag
+      - name: Create version tag
         id: create_tag
-        if: ${{ ! inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
+        if: ${{ !inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
         run: |
-          git tag v${{ steps.bump.outputs.current-version }} -m "Version ${{ steps.bump.outputs.current-version }}" 
-          git push origin v${{ steps.bump.outputs.current-version }}
+          TAG_NAME="v${{ steps.bump.outputs.current-version }}"
+          echo "::notice::Creating tag: $TAG_NAME"
+          
+          git tag "$TAG_NAME" -m "Version ${{ steps.bump.outputs.current-version }}"
+          git push origin "$TAG_NAME"
+          
+          echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub release
+      - name: Create GitHub Release
         id: create_release
-        if: ${{ ! inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
+        if: ${{ !inputs.create-pull-request || inputs.bump-type == 'post-review-release' }}
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.bump.outputs.current-version }}
@@ -231,3 +270,21 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
+          makeLatest: true
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump Type:** ${{ inputs.bump-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ steps.bump.outputs.current-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GPG Signing:** ${{ inputs.gpg-signing }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Create PR:** ${{ inputs.create-pull-request }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.create_pr.outputs.pull-request-number }}" != "" ]]; then
+            echo "- **Pull Request:** #${{ steps.create_pr.outputs.pull-request-number }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ steps.create_tag.outputs.tag-name }}" != "" ]]; then
+            echo "- **Tag Created:** ${{ steps.create_tag.outputs.tag-name }}" >> $GITHUB_STEP_SUMMARY
+          fi
