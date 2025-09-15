@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-09-15
+
 ## [1.1.4] - 2025-09-15
 
 ## [1.1.3] - 2025-09-15
@@ -71,7 +73,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - More dummy changes.
 
-[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.5...HEAD
+
+[1.1.5]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.4...v1.1.5
 
 [1.1.4]: https://github.com/daniel-jones-dev/bumpversion-test/compare/v1.1.3...v1.1.4
 
