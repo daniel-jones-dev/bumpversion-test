@@ -104,6 +104,8 @@ jobs:
             echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --pinentry-mode loopback \
                --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
                --import --batch --yes
+            echo "use-agent" >> ~/.gnupg/gpg.conf
+          
             # Extract GPG key ID from private key
             KEY_ID=$(echo "${{ secrets.GPG_PRIVATE_KEY }}" | \
               gpg --with-colons --import-options show-only --import 2>/dev/null | \
